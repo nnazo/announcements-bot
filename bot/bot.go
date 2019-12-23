@@ -70,7 +70,7 @@ func (ptr *Bot) Run() error {
 func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, ptr.config.Prefix) {
 		if m.Author.ID != ptr.config.BotID {
-			if m.Content == "!test" {
+			if m.Content == ptr.config.Prefix+"test" {
 				s.ChannelMessageSend(m.ChannelID, "test message here")
 			}
 		}

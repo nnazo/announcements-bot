@@ -1,8 +1,9 @@
 package main
 
 import (
-	"discord-bot-test/bot"
 	"fmt"
+
+	"github.com/nnazo/discord-bot/bot"
 )
 
 func main() {
