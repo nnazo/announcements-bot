@@ -3,19 +3,18 @@ package main
 import (
 	"fmt"
 
-	"github.com/nnazo/discord-bot/bot"
+	"github.com/nnazo/discord-bot/scraper"
 )
 
 func main() {
 	var bot bot.Bot
 	err := bot.LoadConfig()
 	if err != nil {
-		fmt.Println(err.Error())
-		return
+		log.Fatalln(err.Error())
 	}
 	err = bot.Run()
 	if err != nil {
-		fmt.Println(err.Error())
+		log.Fatalln(err.Error())
 	}
 	<-make(chan struct{})
 	return

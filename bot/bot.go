@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/bwmarrin/discordgo"
+	"github.com/nnazo/discord-bot/scraper"
 )
 
 type config struct {
@@ -18,6 +19,7 @@ type config struct {
 type Bot struct {
 	config  *config
 	session *discordgo.Session
+	scraper scraper.Scraper
 }
 
 func (ptr *Bot) LoadConfig() error {
@@ -48,6 +50,8 @@ func (ptr *Bot) LoadConfig() error {
 
 	ptr.config.BotID = user.ID
 
+	ptr.scraper.Setup()
+
 	return nil
 }
 
@@ -69,9 +73,15 @@ func (ptr *Bot) Run() error {
 
 func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, ptr.config.Prefix) {
+		command := strings.TrimPrefix(m.Content, ptr.config.Prefix)
 		if m.Author.ID != ptr.config.BotID {
-			if m.Content == ptr.config.Prefix+"test" {
+			switch command {
+			case "test":
 				s.ChannelMessageSend(m.ChannelID, "test message here")
+			case "start":
+				// start scraping
+			case "stop":
+				// stop scraping
 			}
 		}
 	}
