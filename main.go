@@ -1,9 +1,9 @@
 package main
 
 import (
-	"fmt"
+	"log"
 
-	"github.com/nnazo/discord-bot/scraper"
+	"github.com/nnazo/discord-bot/bot"
 )
 
 func main() {
