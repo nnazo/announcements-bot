@@ -17,11 +17,34 @@ type config struct {
 	Prefix string `json:"prefix"`
 }
 
+const (
+	newSerial       = 0
+	completedSerial = iota
+)
+
+type feed struct {
+	scraper     scraper.Scraper
+	channels    []string
+	articleType int
+}
+
+func (ptr *feed) removeChannel(channelID string) {
+	ndx := -1
+	for i, c := range ptr.channels {
+		if channelID == c {
+			ndx = i
+		}
+	}
+	if ndx > -1 && len(ptr.channels) > 0 {
+		ptr.channels[len(ptr.channels)-1], ptr.channels[ndx] = ptr.channels[ndx], ptr.channels[len(ptr.channels)-1]
+		ptr.channels = ptr.channels[:len(ptr.channels)-1]
+	}
+}
+
 type Bot struct {
-	config   *config
-	session  *discordgo.Session
-	scraper  scraper.Scraper
-	channels []string
+	config  *config
+	session *discordgo.Session
+	serials []feed
 }
 
 func (ptr *Bot) LoadConfig() error {
@@ -50,28 +73,46 @@ func (ptr *Bot) LoadConfig() error {
 		return err
 	}
 
+	fmt.Println("adding handler")
+	ptr.session.AddHandler(ptr.messageHandler)
+
 	ptr.config.BotID = user.ID
 
-	ptr.scraper.Setup()
-	ptr.channels = make([]string, 0)
+	feeds := []struct {
+		URL  string
+		Type int
+	}{
+		{"https://natalie.mu/comic/tag/43", newSerial},
+		{"https://natalie.mu/comic/tag/42", completedSerial},
+	}
+
+	ptr.serials = make([]feed, len(feeds))
+
+	for i, f := range feeds {
+		ptr.serials[i].scraper.Setup(f.URL)
+		ptr.serials[i].channels = make([]string, 0)
+		ptr.serials[i].articleType = f.Type
+	}
 
 	return nil
 }
 
 func (ptr *Bot) Run() error {
 	if ptr.session != nil {
-		fmt.Println("adding handler")
-		ptr.session.AddHandler(ptr.messageHandler)
 		fmt.Println("opening session")
 		err := ptr.session.Open()
 		if err != nil {
 			return err
 		}
-		go ptr.scrape()
+		go ptr.scan()
 		fmt.Println("bot running")
 		return nil
 	}
 	return fmt.Errorf("nil session")
+}
+
+func (ptr *Bot) Close() error {
+	return ptr.session.Close()
 }
 
 func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
@@ -79,33 +120,38 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 		command := strings.TrimPrefix(m.Content, ptr.config.Prefix)
 		if m.Author.ID != ptr.config.BotID {
 			switch command {
-			case "add":
-				ptr.channels = append(ptr.channels, m.ChannelID)
+			case "addNewSerials":
+				ptr.serials[newSerial].channels = append(ptr.serials[newSerial].channels, m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added new serialization notifications for this channel**"))
-			case "remove":
+			case "addCompletedSerials":
+				ptr.serials[completedSerial].channels = append(ptr.serials[completedSerial].channels, m.ChannelID)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added completed serialization notifications for this channel**"))
+			case "removeNewSerials":
+				ptr.serials[newSerial].removeChannel(m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed new serialization notifications for this channel**"))
-				ndx := -1
-				for i, c := range ptr.channels {
-					if m.ChannelID == c {
-						ndx = i
-					}
-				}
-				if ndx > -1 && len(ptr.channels) > 0 {
-					ptr.channels[len(ptr.channels)-1], ptr.channels[ndx] = ptr.channels[ndx], ptr.channels[len(ptr.channels)-1]
-					ptr.channels = ptr.channels[:len(ptr.channels)-1]
-				}
+			case "removeCompletedSerials":
+				ptr.serials[completedSerial].removeChannel(m.ChannelID)
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed completed serialization notifications for this channel**"))
 			}
 		}
 	}
 }
 
-func (ptr *Bot) scrape() {
+func (ptr *Bot) scan() {
 	for range time.NewTicker(time.Duration(1) * time.Minute).C {
-		fmt.Println("scraping..")
-		articles := ptr.scraper.FetchNewArticles()
-		for _, a := range articles {
-			for _, c := range ptr.channels {
-				ptr.session.ChannelMessageSend(c, a.URL)
+		for _, s := range ptr.serials {
+			fmt.Println("scraping..")
+			articles := s.scraper.FetchNewArticles()
+			for _, a := range articles {
+				for _, c := range s.channels {
+					var message string
+					if s.articleType == newSerial {
+						message = fmt.Sprintf("> **New Serial**: <%v>\n**Article Title**:%v\n**Start Date**: %v", a.URL, a.Title, a.Date)
+					} else {
+						message = fmt.Sprintf("> **Completed Serial**: <%v>\n**Article Title**:%v\n**End Date**: %v", a.URL, a.Title, a.Date)
+					}
+					ptr.session.ChannelMessageSend(c, message)
+				}
 			}
 		}
 	}

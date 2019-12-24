@@ -21,8 +21,8 @@ type Scraper struct {
 	newest   Article
 }
 
-func (ptr *Scraper) Setup() {
-	ptr.URL = "https://natalie.mu/comic/tag/43"
+func (ptr *Scraper) Setup(url string) {
+	ptr.URL = url
 	ptr.c = colly.NewCollector(
 		colly.AllowedDomains("natalie.mu"),
 		colly.DisallowedDomains("store.natalie.mu"),

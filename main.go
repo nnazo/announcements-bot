@@ -16,6 +16,7 @@ func main() {
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
+	defer bot.Close()
 	<-make(chan struct{})
 	return
 }
