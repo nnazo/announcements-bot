@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/nnazo/announcments-bot/bot"
+	"github.com/nnazo/announcements-bot/bot"
 )
 
 func main() {
