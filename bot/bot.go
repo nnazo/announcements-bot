@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/bwmarrin/discordgo"
-	"github.com/nnazo/serialization-bot/scraper"
+	"github.com/nnazo/announcments-bot/scraper"
 )
 
 type config struct {

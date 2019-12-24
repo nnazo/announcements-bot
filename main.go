@@ -3,7 +3,7 @@ package main
 import (
 	"log"
 
-	"github.com/nnazo/serialization-bot/bot"
+	"github.com/nnazo/announcments-bot/bot"
 )
 
 func main() {
