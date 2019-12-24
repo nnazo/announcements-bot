@@ -27,7 +27,7 @@ func (ptr *Scraper) Setup() {
 		colly.AllowedDomains("natalie.mu"),
 		colly.DisallowedDomains("store.natalie.mu"),
 		colly.AllowURLRevisit(),
-		colly.Async(false),
+		colly.Async(true),
 	)
 	ptr.c.Limit(&colly.LimitRule{
 		Parallelism: 2,
@@ -52,10 +52,6 @@ func (ptr *Scraper) Setup() {
 			})
 		})
 	})
-}
-
-func (ptr *Scraper) Newest() Article {
-	return ptr.newest
 }
 
 func (ptr *Scraper) FetchNewArticles() []Article {

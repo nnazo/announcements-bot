@@ -1,3 +1,3 @@
 # Setup
-* Add bot to your server
-* Add token to config.json in the bot package folder.
+* Create discord bot and add it to your server
+* Place your bot's token in ./bot/config.json
