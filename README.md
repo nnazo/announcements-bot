@@ -18,8 +18,14 @@
 
 ## Prerequisites
 * Must have Go installed
+* [discordgo](https://github.com/bwmarrin/discordgo)
+* [colly](https://github.com/gocolly/colly)
 
 ## Setup
-1. Create a discord bot and add it to server
-2. Place the bot's token in bot/config.json
-3. To start the bot, run ```go run main.go``` or ```go build main.go``` and run the executable.
+1. Have Go installed on your machine
+2. Run `go get github.com/bwmarrin/discordgo`
+3. Run `go get -u github.com/gocolly/colly/...`
+4. Run `go get github.com/nnazo/serialization-bot`
+5. Create a discord bot and add it to server
+6. Place the bot's token in bot/config.json
+7. To start the bot, run ```go run main.go``` or ```go build main.go``` and run the executable.
