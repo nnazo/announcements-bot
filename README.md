@@ -1,4 +1,4 @@
-# announcments-bot
+# announcements-bot
 ##### A discord bot for being notified of new and completed manga serializations
 
 ## Commands
