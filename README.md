@@ -4,10 +4,10 @@
 ## Commands
 * Commands have a '!' prefix, but this can be changed in bot/config.json
 
-* `!addNewSerials`
+* `!notifyNewSerials`
   - The channel the message is received in begins receiving new serialization messages
 
-* `!addCompletedSerials`
+* `!notifyCompletedSerials`
   - The channel the message is received in begins receiving completed serialization messages
 
 * `!removeNewSerials`
