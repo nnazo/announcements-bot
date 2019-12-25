@@ -120,10 +120,10 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 		command := strings.TrimPrefix(m.Content, ptr.config.Prefix)
 		if m.Author.ID != ptr.config.BotID {
 			switch command {
-			case "addNewSerials":
+			case "notifyNewSerials":
 				ptr.serials[newSerial].channels = append(ptr.serials[newSerial].channels, m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added new serialization notifications for this channel**"))
-			case "addCompletedSerials":
+			case "notifyCompletedSerials":
 				ptr.serials[completedSerial].channels = append(ptr.serials[completedSerial].channels, m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added completed serialization notifications for this channel**"))
 			case "removeNewSerials":
@@ -138,18 +138,23 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(1) * time.Minute).C {
+	for range time.NewTicker(time.Duration(10) * time.Second).C {
 		for _, s := range ptr.serials {
-			fmt.Println("scraping..")
 			articles := s.scraper.FetchNewArticles()
 			for _, a := range articles {
 				for _, c := range s.channels {
 					var message string
+
+					loc, _ := time.LoadLocation("Japan")
+					date := strings.Split(time.Now().In(loc).String(), " ")[0]
+
 					if s.articleType == newSerial {
-						message = fmt.Sprintf("> **New Serial**: <%v>\n**Article Title**:%v\n**Start Date**: %v", a.URL, a.Title, a.Date)
+						message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", a.URL, a.Title, date)
 					} else {
-						message = fmt.Sprintf("> **Completed Serial**: <%v>\n**Article Title**:%v\n**End Date**: %v", a.URL, a.Title, a.Date)
+						message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", a.URL, a.Title, date)
 					}
+
+					fmt.Println("sending message:", message)
 					ptr.session.ChannelMessageSend(c, message)
 				}
 			}
