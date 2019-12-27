@@ -2,8 +2,6 @@ package scraper
 
 import (
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/gocolly/colly"
 )
@@ -21,10 +19,11 @@ type Scraper struct {
 	c        *colly.Collector
 	articles []Article
 	newest   Article
+	stop     Article
 }
 
 var (
-	articles []Article = make([]Article, 0)
+	articles = make([]Article, 0)
 )
 
 func (ptr *Scraper) Setup(url string) {
@@ -32,13 +31,9 @@ func (ptr *Scraper) Setup(url string) {
 	ptr.URL = url
 	ptr.c = colly.NewCollector(
 		colly.AllowedDomains("natalie.mu"),
-		colly.DisallowedDomains("store.natalie.mu"),
 		colly.AllowURLRevisit(),
-		colly.Async(false),
+		colly.Async(true),
 	)
-	ptr.c.Limit(&colly.LimitRule{
-		Parallelism: 2,
-	})
 	ptr.c.OnRequest(func(r *colly.Request) {
 		fmt.Println("Visiting", r.URL.String())
 	})
@@ -48,28 +43,33 @@ func (ptr *Scraper) Setup(url string) {
 			e.ForEachWithBreak("li", func(j int, e *colly.HTMLElement) bool {
 				article := getArticle(e)
 				fmt.Println("checking", article.URL)
-				if ptr.newest.URL != "" {
-					s1 := strings.Split(article.URL, "/")
-					id1, _ := strconv.Atoi(s1[len(s1)-1])
-					s2 := strings.Split(ptr.newest.URL, "/")
-					id2, _ := strconv.Atoi(s2[len(s1)-1])
+				if ptr.stop.URL == "" {
+					ptr.stop = ptr.newest
+				}
+				fmt.Println("\tstop", ptr.stop.URL)
+				fmt.Println("\tnewest", ptr.newest.URL)
 
-					if id1 < id2 {
+				if ptr.stop.URL != "" {
+					if ptr.stop.URL != article.URL {
+						articles = append(articles, article)
+						fmt.Println("new article found", articles)
+					} else {
+						fmt.Println("\tsame as newest")
+						ptr.stop = ptr.newest
 						return false
 					}
-				}
-				if ptr.newest.URL != "" && ptr.newest.URL != article.URL {
-					articles = append(articles, article)
-					fmt.Println("new article found", ptr.articles)
-					ptr.newest = article
+
+					if j == 0 {
+						ptr.newest = article
+					}
+
 					return true
-				}
-				if ptr.newest.URL == "" {
+				} else {
 					fmt.Println("\tinitialize newest")
 					ptr.newest = article
-				} else {
-					fmt.Println("\tsame as newest")
+					ptr.stop = article
 				}
+
 				return false
 			})
 		})
@@ -82,8 +82,12 @@ func (ptr *Scraper) FetchNewArticles() []Article {
 	// for ptr.articles and doesn't reflect changes here
 	articles = articles[:0]
 
-	ptr.c.Visit(ptr.URL)
-	ptr.c.Wait()
+	if ptr.c != nil {
+		ptr.c.Visit(ptr.URL)
+		ptr.c.Wait()
+	} else {
+		panic(fmt.Errorf("nil collector"))
+	}
 
 	ptr.articles = articles
 
