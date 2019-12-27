@@ -24,27 +24,28 @@ const (
 
 type feed struct {
 	scraper     scraper.Scraper
-	channels    []string
-	articleType int
+	Channels    []string `json:"channels"`
+	ArticleType int      `json:"type"`
+	URL         string   `json:"URL"`
 }
 
 func (ptr *feed) removeChannel(channelID string) {
 	ndx := -1
-	for i, c := range ptr.channels {
+	for i, c := range ptr.Channels {
 		if channelID == c {
 			ndx = i
 		}
 	}
-	if ndx > -1 && len(ptr.channels) > 0 {
-		ptr.channels[len(ptr.channels)-1], ptr.channels[ndx] = ptr.channels[ndx], ptr.channels[len(ptr.channels)-1]
-		ptr.channels = ptr.channels[:len(ptr.channels)-1]
+	if ndx > -1 && len(ptr.Channels) > 0 {
+		ptr.Channels[len(ptr.Channels)-1], ptr.Channels[ndx] = ptr.Channels[ndx], ptr.Channels[len(ptr.Channels)-1]
+		ptr.Channels = ptr.Channels[:len(ptr.Channels)-1]
 	}
 }
 
 type Bot struct {
 	config  *config
 	session *discordgo.Session
-	serials []feed
+	Serials []feed `json:"feeds"`
 }
 
 func (ptr *Bot) LoadConfig() error {
@@ -56,7 +57,7 @@ func (ptr *Bot) LoadConfig() error {
 	}
 
 	fmt.Println("loading config")
-	json.Unmarshal(b, ptr.config)
+	err = json.Unmarshal(b, ptr.config)
 	if err != nil {
 		return err
 	}
@@ -75,23 +76,27 @@ func (ptr *Bot) LoadConfig() error {
 
 	fmt.Println("adding handler")
 	ptr.session.AddHandler(ptr.messageHandler)
-
 	ptr.config.BotID = user.ID
 
-	feeds := []struct {
-		URL  string
-		Type int
-	}{
-		{"https://natalie.mu/comic/tag/43", newSerial},
-		{"https://natalie.mu/comic/tag/42", completedSerial},
+	fmt.Println("getting feeds")
+	b, err = ioutil.ReadFile("./bot/feeds.json")
+	if err != nil {
+		return err
 	}
 
-	ptr.serials = make([]feed, len(feeds))
+	feeds := make([]feed, 0)
+	err = json.Unmarshal(b, &feeds)
+	if err != nil {
+		return err
+	}
 
+	ptr.Serials = make([]feed, len(feeds))
 	for i, f := range feeds {
-		ptr.serials[i].scraper.Setup(f.URL)
-		ptr.serials[i].channels = make([]string, 0)
-		ptr.serials[i].articleType = f.Type
+		fmt.Println("setup", f.URL)
+		ptr.Serials[i].scraper.Setup(f.URL)
+		ptr.Serials[i].URL = f.URL
+		ptr.Serials[i].Channels = f.Channels
+		ptr.Serials[i].ArticleType = f.ArticleType
 	}
 
 	return nil
@@ -115,40 +120,54 @@ func (ptr *Bot) Close() error {
 	return ptr.session.Close()
 }
 
+func (ptr *Bot) saveFeeds() {
+	b, err := json.MarshalIndent(ptr.Serials, "", "    ")
+	if err != nil {
+		fmt.Println("error marshalling feeds")
+		panic(err)
+	}
+	err = ioutil.WriteFile("./bot/feeds.json", b, 0777)
+	if err != nil {
+		fmt.Println("error writing to feeds.json")
+		panic(err)
+	}
+}
+
 func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate) {
 	if strings.HasPrefix(m.Content, ptr.config.Prefix) {
 		command := strings.TrimPrefix(m.Content, ptr.config.Prefix)
 		if m.Author.ID != ptr.config.BotID {
 			switch command {
 			case "notifyNewSerials":
-				ptr.serials[newSerial].channels = append(ptr.serials[newSerial].channels, m.ChannelID)
+				ptr.Serials[newSerial].Channels = append(ptr.Serials[newSerial].Channels, m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added new serialization notifications for this channel**"))
 			case "notifyCompletedSerials":
-				ptr.serials[completedSerial].channels = append(ptr.serials[completedSerial].channels, m.ChannelID)
+				ptr.Serials[completedSerial].Channels = append(ptr.Serials[completedSerial].Channels, m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added completed serialization notifications for this channel**"))
 			case "removeNewSerials":
-				ptr.serials[newSerial].removeChannel(m.ChannelID)
+				ptr.Serials[newSerial].removeChannel(m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed new serialization notifications for this channel**"))
 			case "removeCompletedSerials":
-				ptr.serials[completedSerial].removeChannel(m.ChannelID)
+				ptr.Serials[completedSerial].removeChannel(m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed completed serialization notifications for this channel**"))
 			}
+			ptr.saveFeeds()
 		}
 	}
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(1) * time.Minute).C {
-		for _, s := range ptr.serials {
+	for range time.NewTicker(time.Duration(10) * time.Second).C {
+		for _, s := range ptr.Serials {
 			articles := s.scraper.FetchNewArticles()
 			for _, a := range articles {
-				for _, c := range s.channels {
+				for _, c := range s.Channels {
 					var message string
 
 					loc, _ := time.LoadLocation("Japan")
 					date := strings.Split(time.Now().In(loc).String(), " ")[0]
 
-					if s.articleType == newSerial {
+					if s.ArticleType == newSerial {
 						message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", a.URL, a.Title, date)
 					} else {
 						message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", a.URL, a.Title, date)
