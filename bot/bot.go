@@ -164,7 +164,7 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(5) * time.Second).C {
+	for range time.NewTicker(time.Duration(1) * time.Minute).C {
 		for _, s := range ptr.Serials {
 			s.scraper.FetchNewArticles()
 			fmt.Println("post", len(s.scraper.Articles), s.scraper.Articles)
