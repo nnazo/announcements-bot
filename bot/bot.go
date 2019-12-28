@@ -157,7 +157,7 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(5) * time.Second).C {
+	for range time.NewTicker(time.Duration(1) * time.Minute).C {
 		for _, s := range ptr.Serials {
 			s.scraper.FetchNewArticles()
 			for i := 0; i < len(s.scraper.Articles); i++ {
