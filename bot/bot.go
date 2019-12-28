@@ -46,7 +46,7 @@ type Bot struct {
 	config  *config
 	session *discordgo.Session
 	Stop    chan struct{}
-	Serials []feed `json:"feeds"`
+	Serials []*feed `json:"feeds"`
 }
 
 func (ptr *Bot) LoadConfig() (chan struct{}, error) {
@@ -93,9 +93,10 @@ func (ptr *Bot) LoadConfig() (chan struct{}, error) {
 		return nil, err
 	}
 
-	ptr.Serials = make([]feed, len(feeds))
+	ptr.Serials = make([]*feed, len(feeds))
 	for i, f := range feeds {
 		fmt.Println("setup", f.URL)
+		ptr.Serials[i] = new(feed)
 		ptr.Serials[i].scraper.Setup(f.URL)
 		ptr.Serials[i].URL = f.URL
 		ptr.Serials[i].Channels = f.Channels
@@ -163,27 +164,33 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(1) * time.Minute).C {
+	for range time.NewTicker(time.Duration(5) * time.Second).C {
 		for _, s := range ptr.Serials {
 			s.scraper.FetchNewArticles()
-			for i := 0; i < len(s.scraper.Articles); i++ {
-				if !s.scraper.Articles[i].Sent {
-					for _, c := range s.Channels {
+			fmt.Println("post", len(s.scraper.Articles), s.scraper.Articles)
+			for _, c := range s.Channels {
+				for j, a := range s.scraper.Articles {
+					if !a.Sent {
+						s.scraper.Articles[j].Sent = true
 						var message string
 
 						loc, _ := time.LoadLocation("Japan")
 						date := strings.Split(time.Now().In(loc).String(), " ")[0]
 
 						if s.ArticleType == newSerial {
-							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", s.scraper.Articles[i].URL, s.scraper.Articles[i].Title, date)
+							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", a.URL, a.Title, date)
 						} else {
-							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", s.scraper.Articles[i].URL, s.scraper.Articles[i].Title, date)
+							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", a.URL, a.Title, date)
 						}
 
 						fmt.Println("sending message:", message)
 						ptr.session.ChannelMessageSend(c, message)
 					}
-					s.scraper.Articles[i].Sent = true
+				}
+			}
+			for _, a := range s.scraper.Articles {
+				if !a.Sent {
+					panic(fmt.Sprintf("article sent field is still false %v", a.URL))
 				}
 			}
 		}

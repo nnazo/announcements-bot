@@ -18,11 +18,11 @@ type Article struct {
 type Scraper struct {
 	URL      string
 	c        *colly.Collector
-	Articles []Article
+	Articles []*Article
 }
 
 func (ptr *Scraper) Setup(url string) {
-	ptr.Articles = make([]Article, 0)
+	ptr.Articles = make([]*Article, 0)
 	ptr.URL = url
 	ptr.c = colly.NewCollector(
 		colly.AllowedDomains("natalie.mu"),
@@ -38,7 +38,7 @@ func (ptr *Scraper) Setup(url string) {
 			if i > 0 {
 				return
 			}
-			articles := make([]Article, 0)
+			articles := make([]*Article, 0)
 			e.ForEach("li", func(j int, e *colly.HTMLElement) {
 				article := getArticle(e)
 				articles = append(articles, article)
@@ -77,8 +77,8 @@ func (ptr *Scraper) FetchNewArticles() {
 	}
 }
 
-func getArticle(e *colly.HTMLElement) Article {
-	return Article{
+func getArticle(e *colly.HTMLElement) *Article {
+	return &Article{
 		URL:      e.ChildAttr("a", "href"),
 		Title:    e.ChildText(".NA_title"),
 		Summary:  e.ChildText(".NA_summary"),
