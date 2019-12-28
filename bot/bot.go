@@ -157,24 +157,27 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(1) * time.Minute).C {
+	for range time.NewTicker(time.Duration(5) * time.Second).C {
 		for _, s := range ptr.Serials {
-			articles := s.scraper.FetchNewArticles()
-			for _, a := range articles {
-				for _, c := range s.Channels {
-					var message string
+			s.scraper.FetchNewArticles()
+			for i := 0; i < len(s.scraper.Articles); i++ {
+				if !s.scraper.Articles[i].Sent {
+					for _, c := range s.Channels {
+						var message string
 
-					loc, _ := time.LoadLocation("Japan")
-					date := strings.Split(time.Now().In(loc).String(), " ")[0]
+						loc, _ := time.LoadLocation("Japan")
+						date := strings.Split(time.Now().In(loc).String(), " ")[0]
 
-					if s.ArticleType == newSerial {
-						message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", a.URL, a.Title, date)
-					} else {
-						message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", a.URL, a.Title, date)
+						if s.ArticleType == newSerial {
+							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", s.scraper.Articles[i].URL, s.scraper.Articles[i].Title, date)
+						} else {
+							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", s.scraper.Articles[i].URL, s.scraper.Articles[i].Title, date)
+						}
+
+						fmt.Println("sending message:", message)
+						ptr.session.ChannelMessageSend(c, message)
 					}
-
-					fmt.Println("sending message:", message)
-					ptr.session.ChannelMessageSend(c, message)
+					s.scraper.Articles[i].Sent = true
 				}
 			}
 		}
