@@ -48,7 +48,6 @@ func (ptr *Scraper) Setup(url string) {
 				for i := 0; i < len(articles); i++ {
 					articles[i].Sent = true
 				}
-				ptr.Articles = articles
 			} else {
 				for i := 0; i < len(articles); i++ {
 					ndx := -1
@@ -63,8 +62,8 @@ func (ptr *Scraper) Setup(url string) {
 						fmt.Println("\tfound unsent article", articles[i].URL)
 					}
 				}
-				ptr.Articles = articles
 			}
+			ptr.Articles = articles
 		})
 	})
 }
