@@ -45,33 +45,36 @@ func (ptr *feed) removeChannel(channelID string) {
 type Bot struct {
 	config  *config
 	session *discordgo.Session
+	Stop    chan struct{}
 	Serials []feed `json:"feeds"`
 }
 
-func (ptr *Bot) LoadConfig() error {
+func (ptr *Bot) LoadConfig() (chan struct{}, error) {
+	ptr.Stop = make(chan struct{}, 0)
+
 	ptr.config = new(config)
 	fmt.Println("reading config")
 	b, err := ioutil.ReadFile("./bot/config.json")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Println("loading config")
 	err = json.Unmarshal(b, ptr.config)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Println("creating session")
 	ptr.session, err = discordgo.New("Bot " + ptr.config.Token)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Println("getting user")
 	user, err := ptr.session.User("@me")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	fmt.Println("adding handler")
@@ -81,13 +84,13 @@ func (ptr *Bot) LoadConfig() error {
 	fmt.Println("getting feeds")
 	b, err = ioutil.ReadFile("./bot/feeds.json")
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	feeds := make([]feed, 0)
 	err = json.Unmarshal(b, &feeds)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ptr.Serials = make([]feed, len(feeds))
@@ -99,7 +102,7 @@ func (ptr *Bot) LoadConfig() error {
 		ptr.Serials[i].ArticleType = f.ArticleType
 	}
 
-	return nil
+	return ptr.Stop, nil
 }
 
 func (ptr *Bot) Run() error {
@@ -150,6 +153,9 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 			case "removeCompletedSerials":
 				ptr.Serials[completedSerial].removeChannel(m.ChannelID)
 				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed completed serialization notifications for this channel**"))
+			case "off":
+				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Turning off**"))
+				ptr.Stop <- struct{}{}
 			}
 			ptr.saveFeeds()
 		}

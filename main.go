@@ -8,7 +8,7 @@ import (
 
 func main() {
 	var bot bot.Bot
-	err := bot.LoadConfig()
+	stop, err := bot.LoadConfig()
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
@@ -17,6 +17,6 @@ func main() {
 		log.Fatalln(err.Error())
 	}
 	defer bot.Close()
-	<-make(chan struct{})
+	<-stop
 	return
 }
