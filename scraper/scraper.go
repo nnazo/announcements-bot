@@ -50,13 +50,17 @@ func (ptr *Scraper) Setup(url string) {
 				}
 				ptr.Articles = articles
 			} else {
-				for _, a := range ptr.Articles {
-					for i := 0; i < len(articles); i++ {
+				for i := 0; i < len(articles); i++ {
+					ndx := -1
+					for _, a := range ptr.Articles {
 						if a.URL == articles[i].URL {
 							articles[i].Sent = a.Sent
-						} else {
-							fmt.Println("\tfound unsent article", articles[i].URL)
+							ndx = i
+							break
 						}
+					}
+					if ndx < 0 {
+						fmt.Println("\tfound unsent article", articles[i].URL)
 					}
 				}
 				ptr.Articles = articles
