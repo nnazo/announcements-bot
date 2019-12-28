@@ -178,9 +178,9 @@ func (ptr *Bot) scan() {
 						date := strings.Split(time.Now().In(loc).String(), " ")[0]
 
 						if s.ArticleType == newSerial {
-							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**:%v\n> **Start Date**: %v", a.URL, a.Title, date)
+							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**: %v\n> **Start Date**: %v", a.URL, a.Title, date)
 						} else {
-							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**:%v\n> **End Date**: %v", a.URL, a.Title, date)
+							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**: %v\n> **End Date**: %v", a.URL, a.Title, date)
 						}
 
 						fmt.Println("sending message:", message)
