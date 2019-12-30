@@ -16,14 +16,13 @@ type Article struct {
 }
 
 type Scraper struct {
-	URL      string
+	URL      string `json:"url"`
 	c        *colly.Collector
 	Articles []*Article
 }
 
-func (ptr *Scraper) Setup(url string) {
+func (ptr *Scraper) Setup() {
 	ptr.Articles = make([]*Article, 0)
-	ptr.URL = url
 	ptr.c = colly.NewCollector(
 		colly.AllowedDomains("natalie.mu"),
 		colly.AllowURLRevisit(),
@@ -34,11 +33,12 @@ func (ptr *Scraper) Setup(url string) {
 	})
 
 	ptr.c.OnHTML("#NA_main", func(e *colly.HTMLElement) {
-		e.ForEach(".NA_articleList", func(i int, e *colly.HTMLElement) {
-			if i > 0 {
+		e.ForEach(".NA_articleList", func(liNdx int, e *colly.HTMLElement) {
+			if liNdx > 0 {
 				return
 			}
 			articles := make([]*Article, 0)
+			oldHTML := false
 			e.ForEach("li", func(j int, e *colly.HTMLElement) {
 				article := getArticle(e)
 				articles = append(articles, article)
@@ -49,7 +49,7 @@ func (ptr *Scraper) Setup(url string) {
 					articles[i].Sent = true
 				}
 			} else {
-				for i := 0; i < len(articles); i++ {
+				for i := range articles {
 					ndx := -1
 					for _, a := range ptr.Articles {
 						if a.URL == articles[i].URL {
@@ -59,16 +59,23 @@ func (ptr *Scraper) Setup(url string) {
 						}
 					}
 					if ndx < 0 {
-						fmt.Println("\tfound unsent article", articles[i].URL)
+						if i < (len(articles) / 2) {
+							fmt.Println("\tfound unsent article", articles[i].URL)
+						} else {
+							oldHTML = true
+						}
 					}
 				}
 			}
-			ptr.Articles = articles
+
+			if !oldHTML {
+				ptr.Articles = articles
+			}
 		})
 	})
 }
 
-func (ptr *Scraper) FetchNewArticles() {
+func (ptr *Scraper) UpdateArticles() {
 	if ptr.c != nil {
 		ptr.c.Visit(ptr.URL)
 		ptr.c.Wait()

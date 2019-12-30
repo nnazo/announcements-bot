@@ -23,10 +23,9 @@ const (
 )
 
 type feed struct {
-	scraper     scraper.Scraper
-	Channels    []string `json:"channels"`
-	ArticleType int      `json:"type"`
-	URL         string   `json:"URL"`
+	Scraper     scraper.Scraper `json:"scraper"`
+	Channels    []string        `json:"channels"`
+	ArticleType int             `json:"type"`
 }
 
 func (ptr *feed) removeChannel(channelID string) {
@@ -95,12 +94,18 @@ func (ptr *Bot) LoadConfig() (chan struct{}, error) {
 
 	ptr.Serials = make([]*feed, len(feeds))
 	for i, f := range feeds {
-		fmt.Println("setup", f.URL)
-		ptr.Serials[i] = new(feed)
-		ptr.Serials[i].scraper.Setup(f.URL)
-		ptr.Serials[i].URL = f.URL
-		ptr.Serials[i].Channels = f.Channels
-		ptr.Serials[i].ArticleType = f.ArticleType
+		fmt.Println("setup", f.Scraper.URL)
+		ptr.Serials[i] = &feed{
+			Scraper:     f.Scraper,
+			Channels:    f.Channels,
+			ArticleType: f.ArticleType,
+		}
+		// ptr.Serials[i].Scraper.URL = f.Scraper.URL
+		// ptr.Serials[i].Scraper.MaxArticles = f.Scraper.MaxArticles
+		// ptr.Serials[i].Scraper.BufferSize = f.Scraper.BufferSize
+		ptr.Serials[i].Scraper.Setup()
+		// ptr.Serials[i].Channels = f.Channels
+		// ptr.Serials[i].ArticleType = f.ArticleType
 	}
 
 	return ptr.Stop, nil
@@ -166,29 +171,32 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 func (ptr *Bot) scan() {
 	for range time.NewTicker(time.Duration(1) * time.Minute).C {
 		for _, s := range ptr.Serials {
-			s.scraper.FetchNewArticles()
-			fmt.Println("post", len(s.scraper.Articles), s.scraper.Articles)
+			s.Scraper.UpdateArticles()
+			fmt.Println("post", len(s.Scraper.Articles), s.Scraper.Articles)
 			for _, c := range s.Channels {
-				for j, a := range s.scraper.Articles {
+				for _, a := range s.Scraper.Articles {
 					if !a.Sent {
-						s.scraper.Articles[j].Sent = true
 						var message string
 
 						loc, _ := time.LoadLocation("Japan")
 						date := strings.Split(time.Now().In(loc).String(), " ")[0]
 
-						if s.ArticleType == newSerial {
+						switch s.ArticleType {
+						case newSerial:
 							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**: %v\n> **Start Date**: %v", a.URL, a.Title, date)
-						} else {
+						case completedSerial:
 							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**: %v\n> **End Date**: %v", a.URL, a.Title, date)
+						default:
+							panic("invalid article type")
 						}
 
 						fmt.Println("sending message:", message)
 						ptr.session.ChannelMessageSend(c, message)
+						a.Sent = true
 					}
 				}
 			}
-			for _, a := range s.scraper.Articles {
+			for _, a := range s.Scraper.Articles {
 				if !a.Sent {
 					panic(fmt.Sprintf("article sent field is still false %v", a.URL))
 				}

@@ -1,12 +1,16 @@
 [
     {
+        "scraper": {
+            "URL": "https://natalie.mu/comic/tag/43"
+        },
         "channels": [],
-        "type": 0,
-        "URL": "https://natalie.mu/comic/tag/43"
+        "type": 0
     },
     {
+        "scraper": {
+            "URL": "https://natalie.mu/comic/tag/42"
+        },
         "channels": [],
-        "type": 1,
-        "URL": "https://natalie.mu/comic/tag/42"
+        "type": 1
     }
 ]
