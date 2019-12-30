@@ -100,12 +100,7 @@ func (ptr *Bot) LoadConfig() (chan struct{}, error) {
 			Channels:    f.Channels,
 			ArticleType: f.ArticleType,
 		}
-		// ptr.Serials[i].Scraper.URL = f.Scraper.URL
-		// ptr.Serials[i].Scraper.MaxArticles = f.Scraper.MaxArticles
-		// ptr.Serials[i].Scraper.BufferSize = f.Scraper.BufferSize
 		ptr.Serials[i].Scraper.Setup()
-		// ptr.Serials[i].Channels = f.Channels
-		// ptr.Serials[i].ArticleType = f.ArticleType
 	}
 
 	return ptr.Stop, nil
