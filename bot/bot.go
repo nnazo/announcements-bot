@@ -171,10 +171,8 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 	}
 }
 
-// note to self, when message gets a reaction, self delete
-
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(10) * time.Second).C {
+	for range time.NewTicker(time.Duration(1) * time.Minute).C {
 		for _, s := range ptr.Serials {
 			s.Scraper.UpdateArticles()
 			for _, c := range s.Channels {
