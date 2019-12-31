@@ -8,11 +8,11 @@ import (
 
 func main() {
 	var bot bot.Bot
-	stop, err := bot.LoadConfig()
+	err := bot.LoadConfig()
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
-	err = bot.Run()
+	stop, err := bot.Run()
 	if err != nil {
 		log.Fatalln(err.Error())
 	}
