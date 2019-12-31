@@ -8,6 +8,7 @@ import (
 
 type Article struct {
 	URL      string
+	Image    string
 	Title    string
 	Summary  string
 	Date     string
@@ -87,6 +88,7 @@ func (ptr *Scraper) UpdateArticles() {
 func getArticle(e *colly.HTMLElement) *Article {
 	return &Article{
 		URL:      e.ChildAttr("a", "href"),
+		Image:    e.ChildAttr("span", "data-bg"),
 		Title:    e.ChildText(".NA_title"),
 		Summary:  e.ChildText(".NA_summary"),
 		Date:     e.ChildText(".NA_date"),
