@@ -164,29 +164,37 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 }
 
 func (ptr *Bot) scan() {
-	for range time.NewTicker(time.Duration(1) * time.Minute).C {
+	for range time.NewTicker(time.Duration(10) * time.Second).C {
 		for _, s := range ptr.Serials {
 			s.Scraper.UpdateArticles()
 			fmt.Println("post", len(s.Scraper.Articles), s.Scraper.Articles)
 			for _, c := range s.Channels {
 				for _, a := range s.Scraper.Articles {
-					if !a.Sent {
-						var message string
-
+					if a.Sent {
 						loc, _ := time.LoadLocation("Japan")
-						date := strings.Split(time.Now().In(loc).String(), " ")[0]
+						embed := &discordgo.MessageEmbed{
+							Color: 174591, // #02a9ff
+							URL:   s.Scraper.URL,
+							Fields: []*discordgo.MessageEmbedField{
+								&discordgo.MessageEmbedField{
+									Name:  "Article URL",
+									Value: a.URL,
+								},
+							},
+							Timestamp: time.Now().In(loc).String(),
+						}
 
 						switch s.ArticleType {
 						case newSerial:
-							message = fmt.Sprintf("> **New Serial**: <%v>\n> **Article Title**: %v\n> **Start Date**: %v", a.URL, a.Title, date)
+							embed.Title = "New Serial"
 						case completedSerial:
-							message = fmt.Sprintf("> **Completed Serial**: <%v>\n> **Article Title**: %v\n> **End Date**: %v", a.URL, a.Title, date)
+							embed.Title = "Completed Serial"
 						default:
 							panic("invalid article type")
 						}
 
-						fmt.Println("sending message:", message)
-						ptr.session.ChannelMessageSend(c, message)
+						fmt.Println("sending message:" /*, message*/)
+						ptr.session.ChannelMessageSendEmbed(c, embed)
 						a.Sent = true
 					}
 				}
