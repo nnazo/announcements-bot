@@ -48,32 +48,32 @@ type Bot struct {
 	Serials []*feed `json:"feeds"`
 }
 
-func (ptr *Bot) LoadConfig() (chan struct{}, error) {
+func (ptr *Bot) LoadConfig() error {
 	ptr.Stop = make(chan struct{}, 0)
 
 	ptr.config = new(config)
 	fmt.Println("reading config")
 	b, err := ioutil.ReadFile("./bot/config.json")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fmt.Println("loading config")
 	err = json.Unmarshal(b, ptr.config)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fmt.Println("creating session")
 	ptr.session, err = discordgo.New("Bot " + ptr.config.Token)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fmt.Println("getting user")
 	user, err := ptr.session.User("@me")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	fmt.Println("adding handler")
@@ -83,13 +83,13 @@ func (ptr *Bot) LoadConfig() (chan struct{}, error) {
 	fmt.Println("getting feeds")
 	b, err = ioutil.ReadFile("./bot/feeds.json")
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	feeds := make([]feed, 0)
 	err = json.Unmarshal(b, &feeds)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	ptr.Serials = make([]*feed, len(feeds))
@@ -103,21 +103,21 @@ func (ptr *Bot) LoadConfig() (chan struct{}, error) {
 		ptr.Serials[i].Scraper.Setup()
 	}
 
-	return ptr.Stop, nil
+	return nil
 }
 
-func (ptr *Bot) Run() error {
+func (ptr *Bot) Run() (chan struct{}, error) {
 	if ptr.session != nil {
 		fmt.Println("opening session")
 		err := ptr.session.Open()
 		if err != nil {
-			return err
+			return nil, err
 		}
 		go ptr.scan()
 		fmt.Println("bot running")
-		return nil
+		return ptr.Stop, nil
 	}
-	return fmt.Errorf("nil session")
+	return nil, fmt.Errorf("nil session")
 }
 
 func (ptr *Bot) Close() error {
@@ -141,21 +141,29 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 	if strings.HasPrefix(m.Content, ptr.config.Prefix) {
 		command := strings.TrimPrefix(m.Content, ptr.config.Prefix)
 		if m.Author.ID != ptr.config.BotID {
+			embed := &discordgo.MessageEmbed{
+				Color: 174591, // #02a9ff
+			}
 			switch command {
 			case "notifyNewSerials":
 				ptr.Serials[newSerial].Channels = append(ptr.Serials[newSerial].Channels, m.ChannelID)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added new serialization notifications for this channel**"))
+				embed.Title = "Now notifying this channel with new serializations"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "notifyCompletedSerials":
 				ptr.Serials[completedSerial].Channels = append(ptr.Serials[completedSerial].Channels, m.ChannelID)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Added completed serialization notifications for this channel**"))
+				embed.Title = "Now notifying this channel with completed serializations"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "removeNewSerials":
 				ptr.Serials[newSerial].removeChannel(m.ChannelID)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed new serialization notifications for this channel**"))
+				embed.Title = "No longer notifying this channel with new serializations"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "removeCompletedSerials":
 				ptr.Serials[completedSerial].removeChannel(m.ChannelID)
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Removed completed serialization notifications for this channel**"))
+				embed.Title = "No longer notifying this channel with completed serializations"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "off":
-				s.ChannelMessageSend(m.ChannelID, fmt.Sprintf("> **Turning off**"))
+				embed.Title = "Turning off"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 				ptr.Stop <- struct{}{}
 			}
 			ptr.saveFeeds()
@@ -163,47 +171,50 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 	}
 }
 
+// note to self, when message gets a reaction, self delete
+
 func (ptr *Bot) scan() {
 	for range time.NewTicker(time.Duration(10) * time.Second).C {
 		for _, s := range ptr.Serials {
 			s.Scraper.UpdateArticles()
-			fmt.Println("post", len(s.Scraper.Articles), s.Scraper.Articles)
 			for _, c := range s.Channels {
 				for _, a := range s.Scraper.Articles {
-					if a.Sent {
-						loc, _ := time.LoadLocation("Japan")
-						embed := &discordgo.MessageEmbed{
-							Color: 174591, // #02a9ff
-							URL:   s.Scraper.URL,
-							Fields: []*discordgo.MessageEmbedField{
-								&discordgo.MessageEmbedField{
-									Name:  "Article URL",
-									Value: a.URL,
+					if !a.Sent {
+						m := ptr.findMessage(a, c)
+						if m == nil {
+							embed := &discordgo.MessageEmbed{
+								Color:       174591, // #02a9ff
+								URL:         a.URL,
+								Title:       a.Title,
+								Description: a.Summary,
+								Thumbnail: &discordgo.MessageEmbedThumbnail{
+									URL: a.Image,
 								},
-							},
-							Timestamp: time.Now().In(loc).String(),
-						}
+							}
 
-						switch s.ArticleType {
-						case newSerial:
-							embed.Title = "New Serial"
-						case completedSerial:
-							embed.Title = "Completed Serial"
-						default:
-							panic("invalid article type")
+							fmt.Println("\tsending message for", a.URL)
+							ptr.session.ChannelMessageSendEmbed(c, embed)
 						}
-
-						fmt.Println("sending message:" /*, message*/)
-						ptr.session.ChannelMessageSendEmbed(c, embed)
 						a.Sent = true
 					}
 				}
 			}
-			for _, a := range s.Scraper.Articles {
-				if !a.Sent {
-					panic(fmt.Sprintf("article sent field is still false %v", a.URL))
-				}
+		}
+	}
+}
+
+func (ptr *Bot) findMessage(a *scraper.Article, channel string) *discordgo.Message {
+	messages, err := ptr.session.ChannelMessages(channel, 100, "", "", "")
+	if err != nil {
+		panic(err)
+	}
+
+	for _, m := range messages {
+		for _, e := range m.Embeds {
+			if e.URL == a.URL {
+				return m
 			}
 		}
 	}
+	return nil
 }
