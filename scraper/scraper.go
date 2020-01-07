@@ -29,9 +29,9 @@ func (ptr *Scraper) Setup() {
 		colly.AllowURLRevisit(),
 		colly.Async(true),
 	)
-	ptr.c.OnRequest(func(r *colly.Request) {
-		fmt.Println("Visiting", r.URL.String())
-	})
+	// ptr.c.OnRequest(func(r *colly.Request) {
+	// 	fmt.Println("Visiting", r.URL.String())
+	// })
 
 	ptr.c.OnHTML("#NA_main", func(e *colly.HTMLElement) {
 		e.ForEach(".NA_articleList", func(liNdx int, e *colly.HTMLElement) {
@@ -45,7 +45,7 @@ func (ptr *Scraper) Setup() {
 				articles = append(articles, article)
 			})
 			if len(ptr.Articles) < 1 {
-				fmt.Println("initializing articles")
+				// fmt.Println("initializing articles")
 				for i := 0; i < len(articles); i++ {
 					articles[i].Sent = true
 				}
@@ -60,11 +60,11 @@ func (ptr *Scraper) Setup() {
 						}
 					}
 					if ndx < 0 {
-						if i < (len(articles) / 2) {
-							fmt.Println("\tfound unsent article", articles[i].URL)
-						} else {
+						if i >= (len(articles) / 2) {
 							oldHTML = true
-						}
+						}/* else {
+							fmt.Println("\tfound unsent article", articles[i].URL)
+						}*/
 					}
 				}
 			}

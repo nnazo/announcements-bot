@@ -190,7 +190,7 @@ func (ptr *Bot) scan() {
 								},
 							}
 
-							fmt.Println("\tsending message for", a.URL)
+							// fmt.Println("\tsending message for", a.URL)
 							ptr.session.ChannelMessageSendEmbed(c, embed)
 						}
 						a.Sent = true
