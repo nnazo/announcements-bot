@@ -1,8 +1,6 @@
 package scraper
 
 import (
-	"fmt"
-
 	"github.com/gocolly/colly"
 )
 
@@ -62,7 +60,7 @@ func (ptr *Scraper) Setup() {
 					if ndx < 0 {
 						if i >= (len(articles) / 2) {
 							oldHTML = true
-						}/* else {
+						} /* else {
 							fmt.Println("\tfound unsent article", articles[i].URL)
 						}*/
 					}
