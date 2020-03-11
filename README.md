@@ -10,11 +10,17 @@
 * `!notifyCompletedSerials`
   - The channel the message is received in begins receiving completed serialization messages
 
+* `!notifyVolumeOneReleases`
+  - The channel the message is received in begins receiving volume 1 release messages
+
 * `!removeNewSerials`
   - The channel the message is received in stops received new serialization messages
 
 * `!removeCompletedSerials`
   - The channel the message is received in stops receiving completed serialization messages
+
+* `!removeVolumeOneReleases`
+  - The channel the message is received in stops receiving volume 1 release messages
 
 * `!off`
   - Turns the bot off
