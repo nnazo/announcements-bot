@@ -20,6 +20,7 @@ type config struct {
 const (
 	newSerial       = 0
 	completedSerial = iota
+	volumeOne       = iota
 )
 
 type feed struct {
@@ -147,19 +148,27 @@ func (ptr *Bot) messageHandler(s *discordgo.Session, m *discordgo.MessageCreate)
 			switch command {
 			case "notifyNewSerials":
 				ptr.Serials[newSerial].Channels = append(ptr.Serials[newSerial].Channels, m.ChannelID)
-				embed.Title = "Now notifying this channel with new serializations"
+				embed.Title = "Now notifying this channel with new serialization articles"
 				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "notifyCompletedSerials":
 				ptr.Serials[completedSerial].Channels = append(ptr.Serials[completedSerial].Channels, m.ChannelID)
-				embed.Title = "Now notifying this channel with completed serializations"
+				embed.Title = "Now notifying this channel with completed serialization articles"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
+			case "notifyVolumeOneReleases":
+				ptr.Serials[volumeOne].Channels = append(ptr.Serials[volumeOne].Channels, m.ChannelID)
+				embed.Title = "Now notifying this channel with volume 1 release articles"
 				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "removeNewSerials":
 				ptr.Serials[newSerial].removeChannel(m.ChannelID)
-				embed.Title = "No longer notifying this channel with new serializations"
+				embed.Title = "No longer notifying this channel with new serialization articles"
 				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "removeCompletedSerials":
 				ptr.Serials[completedSerial].removeChannel(m.ChannelID)
-				embed.Title = "No longer notifying this channel with completed serializations"
+				embed.Title = "No longer notifying this channel with completed serialization articles"
+				s.ChannelMessageSendEmbed(m.ChannelID, embed)
+			case "removeVolumeOneReleases":
+				ptr.Serials[volumeOne].removeChannel(m.ChannelID)
+				embed.Title = "No longer notifying this channel with volume 1 release articles"
 				s.ChannelMessageSendEmbed(m.ChannelID, embed)
 			case "off":
 				embed.Title = "Turning off"

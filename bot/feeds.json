@@ -12,5 +12,12 @@
         },
         "channels": [],
         "type": 1
+    },
+    {
+        "scraper": {
+            "URL": "https://natalie.mu/comic/tag/59"
+        },
+        "channels": [],
+        "type": 2
     }
 ]
