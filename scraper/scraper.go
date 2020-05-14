@@ -31,47 +31,49 @@ func (ptr *Scraper) Setup() {
 	// 	fmt.Println("Visiting", r.URL.String())
 	// })
 
-	ptr.c.OnHTML("#NA_main", func(e *colly.HTMLElement) {
-		e.ForEach(".NA_articleList", func(liNdx int, e *colly.HTMLElement) {
-			if liNdx > 0 {
-				return
-			}
-			articles := make([]*Article, 0)
-			oldHTML := false
-			e.ForEach("li", func(j int, e *colly.HTMLElement) {
-				article := getArticle(e)
-				articles = append(articles, article)
-			})
-			if len(ptr.Articles) < 1 {
-				// fmt.Println("initializing articles")
-				for i := 0; i < len(articles); i++ {
-					articles[i].Sent = true
-				}
-			} else {
-				for i := range articles {
-					ndx := -1
-					for _, a := range ptr.Articles {
-						if a.URL == articles[i].URL {
-							articles[i].Sent = a.Sent
-							ndx = i
-							break
-						}
-					}
-					if ndx < 0 {
-						if i >= (len(articles) / 2) {
-							oldHTML = true
-						} /* else {
-							fmt.Println("\tfound unsent article", articles[i].URL)
-						}*/
-					}
-				}
-			}
+	ptr.c.OnHTML("main", func(e *colly.HTMLElement) {
+		articles := make([]*Article, 0)
+		oldHTML := false
 
-			if !oldHTML {
-				ptr.Articles = articles
-			}
+		e.ForEach(".NA_section-list", func(_ int, e *colly.HTMLElement) {
+			e.ForEach(".NA_card_wrapper", func(_ int, e *colly.HTMLElement) {
+				e.ForEach(".NA_card-l", func(_ int, e *colly.HTMLElement) {
+					article := getArticle(e)
+					articles = append(articles, article)
+				})
+			})
 		})
+
+		if len(ptr.Articles) < 1 {
+			// fmt.Println("initializing articles")
+			for i := 0; i < len(articles); i++ {
+				articles[i].Sent = true
+			}
+		} else {
+			for i := range articles {
+				ndx := -1
+				for _, a := range ptr.Articles {
+					if a.URL == articles[i].URL {
+						articles[i].Sent = a.Sent
+						ndx = i
+						break
+					}
+				}
+				if ndx < 0 {
+					if i >= (len(articles) / 2) {
+						oldHTML = true
+					} /* else {
+						fmt.Println("\tfound unsent article", articles[i].URL)
+					}*/
+				}
+			}
+		}
+
+		if !oldHTML {
+			ptr.Articles = articles
+		}
 	})
+
 }
 
 func (ptr *Scraper) UpdateArticles() {
@@ -84,12 +86,14 @@ func (ptr *Scraper) UpdateArticles() {
 }
 
 func getArticle(e *colly.HTMLElement) *Article {
+	urls := e.ChildAttrs("a", "href")
+	imgs := e.ChildAttrs("img", "data-src")
 	return &Article{
-		URL:      e.ChildAttr("a", "href"),
-		Image:    e.ChildAttr("span", "data-bg"),
-		Title:    e.ChildText(".NA_title"),
-		Summary:  e.ChildText(".NA_summary"),
-		Date:     e.ChildText(".NA_date"),
-		Comments: e.ChildText(".NA_comment2"),
+		URL:     urls[len(urls)-1],
+		Image:   imgs[len(imgs)-1],
+		Title:   e.ChildText(".NA_card_title"),
+		Summary: e.ChildText(".NA_card_summary"),
+		Date:    e.ChildText(".NA_card_date"),
+		//Comments: e.ChildText(".NA_comment2"),
 	}
 }
